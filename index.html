@@ -109,6 +109,28 @@ main{flex:1;padding:0 14px 110px;overflow-y:auto}
 .totline{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid var(--ink);margin-top:10px;padding-top:10px;font-weight:700}
 .totline b{font-family:'Fraunces',serif;font-size:24px;font-weight:900}
 
+/* Version log */
+.loghead{width:100%;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:14px;font-family:'Inter',sans-serif;color:var(--ink);text-align:left}
+.logbody{display:none;margin-top:10px;border-top:1px solid rgba(34,30,21,.12);padding-top:8px;max-height:300px;overflow-y:auto}
+.logopen .logbody{display:block}
+.lrow{display:flex;gap:10px;padding:5px 0;font-size:12.5px;line-height:1.4;border-bottom:1px dashed rgba(34,30,21,.08)}
+.lrow .lt{color:var(--muted);white-space:nowrap;font-size:11.5px;padding-top:1px}
+.lrow .lx{flex:1}
+.lrow.mark .lx{font-weight:700;color:var(--brass-2)}
+
+/* Season standings */
+.seasonrow{border-bottom:1px dashed rgba(34,30,21,.15)}
+.seasonrow:last-of-type{border-bottom:none}
+.seasonhead{width:100%;display:flex;align-items:center;gap:10px;padding:9px 0;text-align:left;color:var(--ink)}
+.seasonhead .rk{width:22px;font-size:12px;font-weight:700;color:var(--muted)}
+.seasonhead .nm{flex:1;font-weight:600;font-size:14.5px}
+.seasonhead .cnt{font-size:11px;color:var(--muted)}
+.seasonhead .amt{font-family:'Fraunces',serif;font-weight:700;font-size:16px;color:var(--red);min-width:66px;text-align:right}
+.seasonrow.king .seasonhead .rk{color:var(--brass-2)}
+.crown{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brass-2);background:rgba(185,146,76,.15);padding:2px 7px;border-radius:999px;margin-left:6px;font-family:'Inter',sans-serif}
+.breakdown{display:none;padding:0 0 8px 32px}
+.bopen .breakdown{display:block}
+
 /* History */
 .hrow{width:100%;text-align:left;background:rgba(0,0,0,.22);border:1px solid rgba(245,239,226,.15);border-radius:var(--radius);padding:13px 15px;margin-bottom:9px;display:flex;justify-content:space-between;align-items:center}
 .hrow .hn{font-family:'Fraunces',serif;font-weight:700;font-size:16px}
@@ -186,7 +208,7 @@ const DEFAULT_FINES=[
 ];
 let S=load();
 function load(){
-  try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.members)return s;}catch(e){}
+  try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.members){s.meetings.forEach(m=>{if(!m.log)m.log=[];});return s;}}catch(e){}
   return {
     members:DEFAULT_MEMBERS.map((n,i)=>({id:'m'+i,name:n})),
     fines:DEFAULT_FINES.map((f,i)=>({id:'f'+i,...f})),
@@ -200,6 +222,8 @@ function today(){return new Date().toLocaleDateString('da-DK',{day:'numeric',mon
 function memTotal(m,mem){return m.entries.filter(e=>e.mid===mem.id).reduce((s,e)=>s+e.amt,0);}
 function meetTotal(m){return m.entries.reduce((s,e)=>s+e.amt,0);}
 function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800);}
+function log(m,txt,mark){m.log.push({ts:Date.now(),txt,mark:!!mark});}
+function stamp(ts){return new Date(ts).toLocaleString('da-DK',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}
 
 /* ============ TABS ============ */
 let tab='meet';
@@ -246,19 +270,58 @@ function renderSum(main,bar,m,readonly){
     const t=memTotal(m,mem);
     return t?`<div class="srow"><span>${mem.name}</span><b class="num">${fmt(t)} kr</b></div>`:'';
   }).join('');
+  const logRows=[...m.log].reverse().map(e=>
+    `<div class="lrow${e.mark?' mark':''}"><span class="lt num">${stamp(e.ts)}</span><span class="lx">${e.txt}</span></div>`).join('');
   main.innerHTML=`
     <div class="card">
       <h2>${m.name}</h2><div class="sub">${m.date} · Opgørelse${m.closed?' <span class="badge">Afsluttet</span>':''}</div>
       ${rows||'<div class="sub">Ingen bøder uddelt endnu.</div>'}
       <div class="totline"><span>I alt til kassen</span><b class="num">${fmt(meetTotal(m))} kr</b></div>
+    </div>
+    <div class="card">
+      <button class="loghead" onclick="this.parentElement.classList.toggle('logopen')">
+        <span>Versionshistorik</span><span class="sub" style="margin:0">${m.log.length} ændringer ▾</span>
+      </button>
+      <div class="logbody">${logRows||'<div class="sub">Ingen ændringer registreret.</div>'}</div>
     </div>`;
-  bar.innerHTML=`<button class="btn btn-line" onclick="copySummary('${m.id}')">Kopiér</button>
-    <button class="btn btn-brass" onclick="sendSummary('${m.id}')">Send til kasserer</button>`;
+  bar.innerHTML=((m.closed||m.id!==S.current)?`<button class="btn btn-line" onclick="reopen('${m.id}')">${m.closed?'Genåbn møde':'Gør aktivt'}</button>`:
+    `<button class="btn btn-line" onclick="copySummary('${m.id}')">Kopiér</button>`)+
+    `<button class="btn btn-brass" onclick="sendSummary('${m.id}')">Send til kasserer</button>`;
 }
 
 function renderHist(main,bar){
   if(!S.meetings.length){main.innerHTML='<div class="empty">Ingen møder endnu.</div>';return;}
-  main.innerHTML=[...S.meetings].reverse().map(m=>`
+  // Season standings
+  const stats=S.members.map(mem=>{
+    let tot=0,cnt=0,perMeet=[];
+    S.meetings.forEach(m=>{
+      const t=memTotal(m,mem),n=m.entries.filter(e=>e.mid===mem.id).length;
+      if(m.absent.includes(mem.id))perMeet.push({name:m.name,t:null});
+      else if(t){tot+=t;cnt+=n;perMeet.push({name:m.name,t});}
+    });
+    return {mem,tot,cnt,perMeet};
+  }).sort((a,b)=>b.tot-a.tot);
+  const seasonTot=S.meetings.reduce((s,m)=>s+meetTotal(m),0);
+  const sRows=stats.map((s,i)=>{
+    const bd=s.perMeet.map(p=>`<div class="srow ${p.t===null?'dim':''}" style="font-size:13px"><span>${p.name}</span><b class="num">${p.t===null?'Afbud':fmt(p.t)+' kr'}</b></div>`).join('');
+    return `<div class="seasonrow${i===0&&s.tot>0?' king':''}">
+      <button class="seasonhead" onclick="this.parentElement.classList.toggle('bopen')">
+        <span class="rk num">${i+1}</span>
+        <span class="nm">${s.mem.name}${i===0&&s.tot>0?' <span class="crown">Bødekongen</span>':''}</span>
+        <span class="cnt">${s.cnt} bøde${s.cnt===1?'':'r'}</span>
+        <span class="amt num">${s.tot?fmt(s.tot)+' kr':'–'}</span>
+      </button>
+      <div class="breakdown">${bd||'<div class="sub">Ingen bøder i sæsonen.</div>'}</div>
+    </div>`;
+  }).join('');
+  main.innerHTML=`
+    <div class="card" style="padding:14px 16px">
+      <h2>Sæsonstilling</h2><div class="sub">Samlede bøder pr. mand · ${S.meetings.length} møde${S.meetings.length===1?'':'r'} · tryk for detaljer</div>
+      ${sRows}
+      <div class="totline"><span>Sæson i alt</span><b class="num">${fmt(seasonTot)} kr</b></div>
+    </div>
+    <div class="mytitle" style="color:rgba(245,239,226,.55)">Møder</div>
+    `+[...S.meetings].reverse().map(m=>`
     <button class="hrow" onclick="viewOld('${m.id}')">
       <div><div class="hn">${m.name}${m.id===S.current?'<span class="badge">Aktivt</span>':''}</div><div class="hd">${m.date} · ${m.entries.length} bøder</div></div>
       <div class="ht num">${fmt(meetTotal(m))} kr</div>
@@ -286,13 +349,16 @@ function renderSet(main,bar){
 function newMeeting(){
   const name=prompt('Hvor holdes mødet? (fx Guldsmeden)');
   if(!name)return;
-  const m={id:'mt'+Date.now(),name:name.trim(),date:today(),entries:[],absent:[],closed:false};
+  const m={id:'mt'+Date.now(),name:name.trim(),date:today(),entries:[],absent:[],closed:false,log:[]};
+  log(m,'Møde oprettet',true);
   S.meetings.push(m);S.current=m.id;save();showTab('meet');
 }
 function undoLast(){
   const m=cur();if(!m||!m.entries.length)return toast('Intet at fortryde');
-  const e=m.entries.pop();save();render();
-  toast('Fjernet: '+S.members.find(x=>x.id===e.mid).name+' '+fmt(e.amt)+' kr');
+  const e=m.entries.pop();
+  log(m,'Fjernet: '+mname(e.mid)+' – '+e.label+' ('+fmt(e.amt)+' kr)');
+  save();render();
+  toast('Fjernet: '+mname(e.mid)+' '+fmt(e.amt)+' kr');
 }
 
 /* ============ MEMBER SHEET ============ */
@@ -317,9 +383,12 @@ function renderSheet(){
       <div class="frow"><span class="fl">${e.label}</span><span class="fa num">${fmt(e.amt)} kr</span><button class="del" onclick="delFine(${m.entries.indexOf(e)})">×</button></div>`).join(''):''}
     <button class="afbudtoggle ${ab?'on':''}" onclick="toggleAfbud()">${ab?'Fjern afbud – '+mem.name+' er her alligevel':'Meld afbud for '+mem.name}</button>`;
 }
+function mname(id){const x=S.members.find(m=>m.id===id);return x?x.name:'(fjernet medlem)';}
 function addFine(fid,amount){
   const m=cur(),f=S.fines.find(x=>x.id===fid);
-  m.entries.push({mid:sheetMid,fid,label:f.l,amt:amount??f.a,ts:Date.now()});
+  const amt=amount??f.a;
+  m.entries.push({mid:sheetMid,fid,label:f.l,amt,ts:Date.now()});
+  log(m,'Bøde: '+mname(sheetMid)+' – '+f.l+' ('+fmt(amt)+' kr)');
   save();render();
   if(navigator.vibrate)navigator.vibrate(20);
   closeSheet();
@@ -332,10 +401,19 @@ function pickAmount(fid){
     `<div class="mytitle">${f.l} – vælg beløb</div><div class="seg" id="amtSeg">${[25,50,75,100].map(a=>`<button onclick="addFine('${fid}',${a})">${a}</button>`).join('')}</div>`);
   document.getElementById('amtSeg').scrollIntoView();
 }
-function delFine(idx){const m=cur();m.entries.splice(idx,1);save();render();renderSheet();}
+function delFine(idx){
+  const m=cur(),e=m.entries[idx];
+  log(m,'Fjernet: '+mname(e.mid)+' – '+e.label+' ('+fmt(e.amt)+' kr)');
+  m.entries.splice(idx,1);save();render();renderSheet();
+}
 function toggleAfbud(){
   const m=cur();const i=m.absent.indexOf(sheetMid);
-  if(i>=0)m.absent.splice(i,1);else{m.absent.push(sheetMid);m.entries=m.entries.filter(e=>e.mid!==sheetMid);}
+  if(i>=0){m.absent.splice(i,1);log(m,'Afbud fjernet: '+mname(sheetMid));}
+  else{
+    const dropped=m.entries.filter(e=>e.mid===sheetMid);
+    m.absent.push(sheetMid);m.entries=m.entries.filter(e=>e.mid!==sheetMid);
+    log(m,'Afbud: '+mname(sheetMid)+(dropped.length?' ('+dropped.length+' bøde'+(dropped.length>1?'r':'')+' slettet)':''));
+  }
   save();render();renderSheet();
 }
 
@@ -353,7 +431,19 @@ function summaryText(id){
   lines.push('Bøder uddeles med smil – uden diskussion.');
   return lines.join('\n');
 }
-function markClosed(id){const m=S.meetings.find(x=>x.id===id);if(!m.closed){m.closed=true;if(S.current===id)S.current=null;save();}}
+function markClosed(id){
+  const m=S.meetings.find(x=>x.id===id);
+  if(!m.closed){m.closed=true;if(S.current===id)S.current=null;log(m,'Opgørelse sendt – møde afsluttet ('+fmt(meetTotal(m))+' kr)',true);}
+  else{log(m,'Opgørelse sendt igen ('+fmt(meetTotal(m))+' kr)',true);}
+  save();
+}
+function reopen(id){
+  const m=S.meetings.find(x=>x.id===id);
+  if(S.current&&S.current!==id&&!confirm('Et andet møde er aktivt. Genåbn "'+m.name+'" alligevel?'))return;
+  m.closed=false;S.current=id;
+  log(m,'Møde genåbnet – rettelser efter dette tidspunkt',true);
+  save();showTab('meet');toast(m.name+' genåbnet');
+}
 async function sendSummary(id){
   const text=summaryText(id);
   if(navigator.share){try{await navigator.share({title:'XRT73 Bøder',text});markClosed(id);render();toast('Sendt – mødet er afsluttet');}catch(e){}}
