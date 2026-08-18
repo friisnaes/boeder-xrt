@@ -206,7 +206,29 @@ const DEFAULT_FINES=[
  {l:'Mødets specialbøde',a:null},
  {l:'Bødemesterens fri-kort',a:-50,credit:true},
 ];
+const SEED=[{"name":"Guldsmeden","date":"1. møde · 2026","absent":["Axel","Bock","Spuur"],"entries":[["Boye","For sent",25],["Jes","For sent",50],["Bo","Telefon fremme",25],["Kim","Telefon fremme",25],["Boye","Telefon fremme",25],["Holte","Telefon fremme",25],["Tage","Telefon fremme",25],["Peter","Telefon fremme",25],["Steff","Telefon fremme",25],["Danny","Telefon fremme",25],["Jacob","Telefon fremme",25],["Jes","Telefon fremme",25],["Fritz","Telefon fremme",25],["Axel","Været i medierne",100],["Bo","Uforberedt til eget punkt",25],["Bo","Over 60 sek. forklaring",25],["Fritz","Name-dropping",25],["Kim","Alder/ryg/knæ/tisse-problemer",25],["Jacob","Alder/ryg/knæ/tisse-problemer",25],["Jes","Alder/ryg/knæ/tisse-problemer",25],["Jes","Selverklæret ekspert",25],["Jacob","Bødemesterens fri-kort",-25],["Jes","Bødemesterens fri-kort",-25],["Bo","Mødets specialbøde",100]]},{"name":"The Scandinavian","date":"2. møde · 2026","absent":["Bock","Nis"],"entries":[["Kim","Telefon fremme",25],["Bo","Gentager noget sagt før",25],["Præst","Gentager noget sagt før",25],["Spuur","Gentager noget sagt før",25],["Holte","Gentager noget sagt før",25],["Axel","Gentager noget sagt før",25],["Peter","Gentager noget sagt før",25],["Kim","Uforberedt til eget punkt",75],["Tage","Uforberedt til eget punkt",75],["Danny","Spørgsmål for at høre sig selv",50],["Jacob","Spørgsmål for at høre sig selv",50],["Jes","Spørgsmål for at høre sig selv",50],["Jes","Alder/ryg/knæ/tisse-problemer",25],["Bo","Selverklæret ekspert",50],["Bo","Glemmer RT-tradition",50],["Bo","Snakker uden at have ordet",50],["Kim","Snakker uden at have ordet",25],["Præst","Snakker uden at have ordet",25],["Spuur","Snakker uden at have ordet",25],["Holte","Snakker uden at have ordet",25],["Axel","Snakker uden at have ordet",25],["Peter","Snakker uden at have ordet",25],["Danny","Snakker uden at have ordet",25],["Jacob","Snakker uden at have ordet",25],["Jes","Snakker uden at have ordet",25],["Boye","Selvbøde (frivillig)",25],["Præst","Bødemesterens fri-kort",-50],["Axel","Mødets specialbøde",50],["Steff","Mødets specialbøde",50],["Fritz","Mødets specialbøde",50]]},{"name":"Klubmesterskaber","date":"3. møde · 2026","absent":["Bock","Jes","Tage"],"entries":[["Fritz","Uforberedt til eget punkt",100]]}];
+function seedImport(s){
+  let added=0;
+  const news=[];
+  SEED.forEach((sm,i)=>{
+    if(s.meetings.some(m=>m.name===sm.name))return;
+    const mid=n=>{
+      let x=s.members.find(m=>m.name===n);
+      if(!x){x={id:'m'+Date.now()+Math.random().toString(36).slice(2,5),name:n};s.members.push(x);}
+      return x.id;
+    };
+    const fid=l=>{const f=s.fines.find(f=>f.l===l);return f?f.id:null;};
+    const m={id:'seed'+i,name:sm.name,date:sm.date,closed:true,
+      absent:sm.absent.map(mid),
+      entries:sm.entries.map(e=>({mid:mid(e[0]),fid:fid(e[1]),label:e[1],amt:e[2],ts:0})),
+      log:[{ts:Date.now(),txt:'Importeret fra Excel-arket (XRT_bøder_2026)',mark:true}]};
+    news.push(m);added++;
+  });
+  if(added){s.meetings=[...news,...s.meetings];}
+  return added;
+}
 let S=load();
+if(seedImport(S))save();
 function load(){
   try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.members){s.meetings.forEach(m=>{if(!m.log)m.log=[];});return s;}}catch(e){}
   return {
@@ -248,7 +270,7 @@ function renderMeet(main,bar){
   }
   let rows=S.members.map(mem=>{
     const t=memTotal(m,mem),n=m.entries.filter(e=>e.mid===mem.id).length,ab=m.absent.includes(mem.id);
-    if(ab)return `<button class="mrow afbud" onclick="openMember('${mem.id}')"><span class="nm">${mem.name}</span><span class="amt">Afbud</span></button>`;
+    if(ab)return `<button class="mrow afbud" onclick="openMember('${mem.id}')"><span class="nm">${mem.name}</span><span class="amt">Afbud${t?' · '+fmt(t)+' kr':''}</span></button>`;
     return `<button class="mrow" onclick="openMember('${mem.id}')">
       <span class="nm">${mem.name}</span>
       ${n?`<span class="cnt">${n} bøde${n>1?'r':''}</span>`:''}
@@ -266,8 +288,8 @@ function renderMeet(main,bar){
 function renderSum(main,bar,m,readonly){
   if(!m){main.innerHTML='<div class="empty">Intet møde at gøre op.<br>Start et møde under fanen »Møde«.</div>';return;}
   const rows=S.members.map(mem=>{
-    if(m.absent.includes(mem.id))return `<div class="srow dim"><span>${mem.name}</span><b>Afbud</b></div>`;
     const t=memTotal(m,mem);
+    if(m.absent.includes(mem.id))return `<div class="srow dim"><span>${mem.name} · afbud</span><b class="num">${t?fmt(t)+' kr':'–'}</b></div>`;
     return t?`<div class="srow"><span>${mem.name}</span><b class="num">${fmt(t)} kr</b></div>`:'';
   }).join('');
   const logRows=[...m.log].reverse().map(e=>
@@ -296,8 +318,9 @@ function renderHist(main,bar){
     let tot=0,cnt=0,perMeet=[];
     S.meetings.forEach(m=>{
       const t=memTotal(m,mem),n=m.entries.filter(e=>e.mid===mem.id).length;
-      if(m.absent.includes(mem.id))perMeet.push({name:m.name,t:null});
-      else if(t){tot+=t;cnt+=n;perMeet.push({name:m.name,t});}
+      const ab=m.absent.includes(mem.id);
+      if(t){tot+=t;cnt+=n;perMeet.push({name:m.name+(ab?' · afbud':''),t});}
+      else if(ab)perMeet.push({name:m.name,t:null});
     });
     return {mem,tot,cnt,perMeet};
   }).sort((a,b)=>b.tot-a.tot);
@@ -375,7 +398,7 @@ function renderSheet(){
   document.getElementById('shTot').textContent=fmt(memTotal(m,mem))+' kr';
   const mine=m.entries.filter(e=>e.mid===mem.id);
   document.getElementById('shBody').innerHTML=`
-    ${ab?'':`<div class="finegrid">${S.fines.map(f=>{
+    ${`<div class="finegrid">${S.fines.map(f=>{
       if(f.a===null)return `<button class="fbtn wide" onclick="pickAmount('${f.id}')"><span class="fl">${f.l}</span><span class="fa">vælg beløb…</span></button>`;
       return `<button class="fbtn ${f.credit?'credit':''}" onclick="addFine('${f.id}')"><span class="fl">${f.l}</span><span class="fa num">${f.a>0?fmt(f.a):fmt(f.a)} kr</span></button>`;
     }).join('')}</div>`}
@@ -409,11 +432,7 @@ function delFine(idx){
 function toggleAfbud(){
   const m=cur();const i=m.absent.indexOf(sheetMid);
   if(i>=0){m.absent.splice(i,1);log(m,'Afbud fjernet: '+mname(sheetMid));}
-  else{
-    const dropped=m.entries.filter(e=>e.mid===sheetMid);
-    m.absent.push(sheetMid);m.entries=m.entries.filter(e=>e.mid!==sheetMid);
-    log(m,'Afbud: '+mname(sheetMid)+(dropped.length?' ('+dropped.length+' bøde'+(dropped.length>1?'r':'')+' slettet)':''));
-  }
+  else{m.absent.push(sheetMid);log(m,'Afbud: '+mname(sheetMid));}
   save();render();renderSheet();
 }
 
@@ -422,8 +441,8 @@ function summaryText(id){
   const m=S.meetings.find(x=>x.id===id);
   let lines=['XRT73 · Bøder','Møde: '+m.name+' · '+m.date,'––––––––––––––––'];
   S.members.forEach(mem=>{
-    if(m.absent.includes(mem.id)){lines.push(mem.name+': afbud');return;}
     const t=memTotal(m,mem);
+    if(m.absent.includes(mem.id)){lines.push(mem.name+': '+(t?fmt(t)+' kr (afbud)':'afbud'));return;}
     if(t)lines.push(mem.name+': '+fmt(t)+' kr');
   });
   lines.push('––––––––––––––––','I ALT: '+fmt(meetTotal(m))+' kr');
