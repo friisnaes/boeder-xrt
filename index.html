@@ -57,6 +57,8 @@ main{flex:1;padding:0 14px 170px;overflow-y:auto}
 .report .rpay{margin-top:26px;text-align:center;font-size:14px;line-height:1.6}
 .report .rpay b{font-family:'Fraunces',serif}
 .report .rmotto{text-align:center;font-family:'Fraunces',serif;font-style:italic;font-size:13px;color:var(--muted);margin-top:30px}
+.report .rsign{display:flex;justify-content:space-around;margin-top:30px;text-align:center;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.report .rsign b{display:block;font-family:'Fraunces',serif;font-size:17px;font-weight:700;color:var(--ink);text-transform:none;letter-spacing:0;border-bottom:1.5px solid var(--ink);padding:0 14px 3px;margin-bottom:5px}
 .report .rstamp{margin:26px auto 0;width:max-content;border:2.5px solid var(--red);color:var(--red);font-weight:900;font-family:'Fraunces',serif;letter-spacing:.18em;padding:7px 18px;border-radius:6px;transform:rotate(-4deg);text-transform:uppercase;font-size:15px;opacity:.85}
 
 /* Meeting banner */
@@ -249,11 +251,15 @@ function seedImport(s){
 let S=load();
 try{if(seedImport(S))save();}catch(e){}
 function load(){
-  try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.members){s.meetings.forEach(m=>{if(!m.log)m.log=[];});return s;}}catch(e){}
+  try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.members){
+    s.meetings.forEach(m=>{if(!m.log)m.log=[];});
+    if(!s.bm)s.bm='Friisnæs';
+    if(!s.kasserer||s.kasserer==='Friisnæs')s.kasserer='Liebhaveren';
+    return s;}}catch(e){}
   return {
     members:DEFAULT_MEMBERS.map((n,i)=>({id:'m'+i,name:n})),
     fines:DEFAULT_FINES.map((f,i)=>({id:'f'+i,...f})),
-    meetings:[],current:null,kasserer:''
+    meetings:[],current:null,kasserer:'Liebhaveren',bm:'Friisnæs'
   };
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
@@ -377,8 +383,9 @@ function renderSet(main,bar){
       <div>${S.members.map(m=>`<span class="chip">${m.name}<button onclick="delMember('${m.id}')">×</button></span>`).join('')}</div>
       <div class="inline" style="margin-top:8px"><input type="text" id="newMem" placeholder="Nyt medlem"><button class="small" onclick="addMember()">Tilføj</button></div>
     </div>
-    <div class="card"><h2>Kasserer</h2><div class="sub">Navn vises i beskeden, der sendes efter mødet.</div>
-      <input type="text" id="kass" value="${S.kasserer||''}" placeholder="Kassererens navn" onchange="S.kasserer=this.value;save()">
+    <div class="card"><h2>Roller</h2><div class="sub">Vises i opgørelsen. Kassereren tilskriver bøderne efterfølgende.</div>
+      <input type="text" id="bm" value="${S.bm||''}" placeholder="Bødemester" onchange="S.bm=this.value;save()">
+      <input type="text" id="kass" value="${S.kasserer||''}" placeholder="Kasserer" onchange="S.kasserer=this.value;save()">
     </div>
     <div class="card"><h2>Data</h2><div class="sub">Alt gemmes kun lokalt på denne telefon. Tag en sikkerhedskopi en gang imellem.</div>
       <button class="small" onclick="exportData()">Eksportér sikkerhedskopi</button>
@@ -465,7 +472,8 @@ function summaryText(id){
     if(t)lines.push(mem.name+': '+fmt(t)+' kr');
   });
   lines.push('––––––––––––––––','I ALT: '+fmt(meetTotal(m))+' kr');
-  lines.push('','Betales til '+(S.kasserer?S.kasserer+' (kasserer)':'kassereren')+' – gerne MobilePay.');
+  lines.push('','Bøderne tilskrives efterfølgende af '+(S.kasserer||'kassereren')+' (kasserer).');
+  lines.push('Bødemester: '+(S.bm||'')+'.');
   lines.push('Bøder uddeles med smil – uden diskussion.');
   return lines.join('\n');
 }
@@ -491,7 +499,7 @@ function reportLink(id){
     if(!t&&!ab)return null;
     return [mem.name,t,ab?1:0];
   }).filter(Boolean);
-  const o={n:m.name,d:m.date,t:meetTotal(m),k:S.kasserer||'',r:rows};
+  const o={n:m.name,d:m.date,t:meetTotal(m),k:S.kasserer||'',b:S.bm||'',r:rows};
   return location.origin+location.pathname+'#r='+b64u(JSON.stringify(o));
 }
 async function sendSummary(id){
@@ -544,7 +552,8 @@ function renderReport(o){
     <hr class="rrule">
     ${rows}
     <div class="totline"><span>I alt til kassen</span><b class="num">${fmt(o.t)} kr</b></div>
-    <div class="rpay">Betales til <b>${o.k||'kassereren'}</b>${o.k?' (kasserer)':''} – gerne MobilePay.</div>
+    <div class="rpay">Bøderne tilskrives efterfølgende af <b>${o.k||'kassereren'}</b> (kasserer).</div>
+    <div class="rsign"><span><b>${o.b||''}</b>Bødemester</span><span><b>${o.k||''}</b>Kasserer</span></div>
     <div class="rstamp">Vedtaget uden afstemning</div>
     <div class="rmotto">»Bøder uddeles med smil – uden diskussion.«</div>
   </div>`;
