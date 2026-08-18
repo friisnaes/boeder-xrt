@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#17352A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>XRT73 · Bøder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#17352A; --green-2:#1E4234; --paper:#F5EFE2; --paper-2:#ECE3CF;
+  --ink:#221E15; --brass:#B9924C; --brass-2:#8F6E33; --red:#A5342A;
+  --muted:#6E6552; --ok:#2E6B4F; --radius:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:'Inter',system-ui,sans-serif; background:var(--green); color:var(--paper);
+  max-width:520px; margin:0 auto; min-height:100dvh; display:flex; flex-direction:column;
+  background-image:radial-gradient(circle at 50% -10%, #234A3A 0%, var(--green) 55%);
+}
+button{font-family:inherit;border:none;background:none;color:inherit;cursor:pointer}
+h1,h2,.serif{font-family:'Fraunces',serif}
+.num{font-variant-numeric:tabular-nums}
+
+/* Header */
+header{padding:18px 18px 10px;text-align:center}
+header .club{font-size:11px;letter-spacing:.22em;color:var(--brass);text-transform:uppercase;font-weight:600}
+header h1{font-size:26px;font-weight:900;letter-spacing:.01em;margin-top:2px}
+header .motto{font-family:'Fraunces',serif;font-style:italic;font-size:12.5px;color:rgba(245,239,226,.55);margin-top:4px}
+
+/* Tabs */
+nav{display:flex;gap:6px;padding:8px 14px 12px}
+nav button{flex:1;padding:9px 4px;border-radius:999px;font-size:12.5px;font-weight:600;color:rgba(245,239,226,.6);border:1px solid rgba(245,239,226,.18)}
+nav button.on{background:var(--brass);color:var(--green);border-color:var(--brass)}
+
+main{flex:1;padding:0 14px 110px;overflow-y:auto}
+
+/* Meeting banner */
+.mbanner{background:rgba(0,0,0,.22);border:1px solid rgba(185,146,76,.35);border-radius:var(--radius);padding:12px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.mbanner .mname{font-family:'Fraunces',serif;font-weight:700;font-size:17px}
+.mbanner .mdate{font-size:12px;color:rgba(245,239,226,.55);margin-top:1px}
+.mbanner .mtotal{font-family:'Fraunces',serif;font-weight:900;font-size:24px;color:var(--brass)}
+.mbanner .mtotal small{font-size:11px;font-weight:600;display:block;text-align:right;color:rgba(245,239,226,.5);font-family:'Inter',sans-serif}
+
+/* Member ledger */
+.ledger{background:var(--paper);color:var(--ink);border-radius:var(--radius);overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+.mrow{display:flex;align-items:center;width:100%;text-align:left;padding:13px 14px;border-bottom:1px solid rgba(34,30,21,.12);gap:10px}
+.mrow:last-child{border-bottom:none}
+.mrow:active{background:var(--paper-2)}
+.mrow .nm{font-weight:600;font-size:16px;flex:1}
+.mrow .cnt{font-size:11px;color:var(--muted)}
+.mrow .amt{font-family:'Fraunces',serif;font-weight:700;font-size:18px;color:var(--red);min-width:64px;text-align:right}
+.mrow .amt.zero{color:rgba(34,30,21,.28)}
+.mrow.afbud .nm{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(110,101,82,.5)}
+.mrow.afbud .amt{color:var(--muted);font-size:12px;font-family:'Inter',sans-serif;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.empty{padding:40px 20px;text-align:center;color:rgba(245,239,226,.6);font-size:14px;line-height:1.6}
+
+/* Bottom action bar */
+.bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;padding:12px 14px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(to top,var(--green) 70%,transparent);display:flex;gap:10px}
+.btn{flex:1;padding:15px;border-radius:var(--radius);font-size:15px;font-weight:700;text-align:center}
+.btn-brass{background:var(--brass);color:var(--green)}
+.btn-line{border:1.5px solid rgba(245,239,226,.35);color:var(--paper)}
+.btn:active{opacity:.8}
+
+/* Bottom sheet */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
+.sheet{position:fixed;bottom:0;left:50%;transform:translate(-50%,105%);width:100%;max-width:520px;background:var(--paper);color:var(--ink);border-radius:20px 20px 0 0;z-index:50;transition:transform .25s cubic-bezier(.3,1,.4,1);max-height:86dvh;display:flex;flex-direction:column}
+.open .scrim{opacity:1;pointer-events:auto}
+.open .sheet{transform:translate(-50%,0)}
+.sheet .grab{width:38px;height:4px;border-radius:2px;background:rgba(34,30,21,.2);margin:10px auto 0}
+.sheet .shead{padding:10px 18px 8px;display:flex;justify-content:space-between;align-items:baseline}
+.sheet .shead h2{font-size:21px;font-weight:900}
+.sheet .shead .stot{font-family:'Fraunces',serif;font-weight:700;font-size:18px;color:var(--red)}
+.sheet .body{overflow-y:auto;padding:0 14px calc(18px + env(safe-area-inset-bottom))}
+
+.finegrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fbtn{background:#fff;border:1px solid rgba(34,30,21,.16);border-radius:12px;padding:11px 10px;text-align:left;display:flex;flex-direction:column;gap:3px;min-height:64px;justify-content:center}
+.fbtn:active{background:var(--paper-2)}
+.fbtn .fl{font-size:12.5px;font-weight:600;line-height:1.25}
+.fbtn .fa{font-family:'Fraunces',serif;font-weight:700;font-size:15px;color:var(--red)}
+.fbtn.credit .fa{color:var(--ok)}
+.fbtn.wide{grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:center;min-height:0}
+
+.seg{display:flex;gap:6px;margin:10px 0 4px}
+.seg button{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(34,30,21,.2);font-weight:700;font-size:14px}
+.seg button.on{background:var(--green);color:var(--paper);border-color:var(--green)}
+
+.mytitle{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:16px 2px 8px}
+.frow{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid rgba(34,30,21,.12);border-radius:10px;padding:9px 12px;margin-bottom:6px}
+.frow .fl{flex:1;font-size:13px;font-weight:500}
+.frow .fa{font-family:'Fraunces',serif;font-weight:700;color:var(--red)}
+.frow .del{width:30px;height:30px;border-radius:8px;background:rgba(165,52,42,.1);color:var(--red);font-size:16px;font-weight:700;line-height:30px;text-align:center}
+.afbudtoggle{width:100%;margin-top:14px;padding:12px;border-radius:12px;border:1.5px dashed rgba(34,30,21,.3);font-weight:600;font-size:13.5px;color:var(--muted)}
+.afbudtoggle.on{background:rgba(110,101,82,.12);border-style:solid}
+
+/* Summary / opgørelse */
+.card{background:var(--paper);color:var(--ink);border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+.card h2{font-size:19px;font-weight:900;margin-bottom:2px}
+.card .sub{font-size:12px;color:var(--muted);margin-bottom:12px}
+.srow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed rgba(34,30,21,.15);font-size:14.5px}
+.srow:last-of-type{border-bottom:none}
+.srow b{font-family:'Fraunces',serif;font-weight:700;color:var(--red)}
+.srow.dim{color:var(--muted)} .srow.dim b{color:var(--muted);font-family:'Inter',sans-serif;font-size:12px;font-weight:600}
+.totline{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid var(--ink);margin-top:10px;padding-top:10px;font-weight:700}
+.totline b{font-family:'Fraunces',serif;font-size:24px;font-weight:900}
+
+/* History */
+.hrow{width:100%;text-align:left;background:rgba(0,0,0,.22);border:1px solid rgba(245,239,226,.15);border-radius:var(--radius);padding:13px 15px;margin-bottom:9px;display:flex;justify-content:space-between;align-items:center}
+.hrow .hn{font-family:'Fraunces',serif;font-weight:700;font-size:16px}
+.hrow .hd{font-size:12px;color:rgba(245,239,226,.55);margin-top:2px}
+.hrow .ht{font-family:'Fraunces',serif;font-weight:900;font-size:19px;color:var(--brass)}
+.badge{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:rgba(185,146,76,.2);color:var(--brass);margin-left:8px}
+
+/* Settings */
+.set .card{padding:14px}
+.set input[type=text]{width:100%;padding:11px 12px;border-radius:10px;border:1px solid rgba(34,30,21,.25);font-size:14px;font-family:inherit;background:#fff;margin-bottom:8px}
+.set .inline{display:flex;gap:8px}
+.set .inline input{flex:1;margin-bottom:0}
+.set .small{padding:11px 14px;border-radius:10px;background:var(--green);color:var(--paper);font-weight:700;font-size:13px}
+.chip{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid rgba(34,30,21,.18);border-radius:999px;padding:6px 6px 6px 13px;margin:0 6px 6px 0;font-size:13px;font-weight:600}
+.chip button{width:22px;height:22px;border-radius:50%;background:rgba(165,52,42,.12);color:var(--red);font-weight:700;font-size:13px}
+.dangerbtn{width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--red);color:var(--red);font-weight:700;font-size:13px;margin-top:6px}
+.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--paper);color:var(--ink);padding:11px 20px;border-radius:999px;font-size:13.5px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.4);transition:transform .25s;z-index:99}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="club">XRT73 · Bødeprotokol</div>
+  <h1 id="hTitle">Bøder 2026</h1>
+  <div class="motto">»Bødemesteren har ret – også når han tager fejl.«</div>
+</header>
+
+<nav>
+  <button id="tabMeet" class="on" onclick="showTab('meet')">Møde</button>
+  <button id="tabSum" onclick="showTab('sum')">Opgørelse</button>
+  <button id="tabHist" onclick="showTab('hist')">Historik</button>
+  <button id="tabSet" onclick="showTab('set')">Opsætning</button>
+</nav>
+
+<main id="main"></main>
+
+<div class="bar" id="bar"></div>
+
+<div id="sheetWrap">
+  <div class="scrim" onclick="closeSheet()"></div>
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="shead"><h2 id="shName"></h2><div class="stot num" id="shTot"></div></div>
+    <div class="body" id="shBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ DATA ============ */
+const KEY='xrt_boeder_v1';
+const DEFAULT_MEMBERS=['Bo','Kim','Boye','Præst','Spuur','Holte','Axel','Tage','Peter','Nis','Bock','Steff','Danny','Jacob','Jes','Fritz'];
+const DEFAULT_FINES=[
+ {l:'Udeblivelse uden afbud',a:100},
+ {l:'For sent',a:50},
+ {l:'Telefon fremme',a:25},
+ {l:'Forstyrrer når andre taler',a:50},
+ {l:'Gentager noget sagt før',a:25},
+ {l:'Været i medierne',a:50},
+ {l:'Uforberedt til eget punkt',a:75},
+ {l:'Over 60 sek. forklaring',a:25},
+ {l:'Name-dropping',a:25},
+ {l:'Spørgsmål for at høre sig selv',a:50},
+ {l:'Rejsehistorie uden pointe',a:25},
+ {l:'Alder/ryg/knæ/tisse-problemer',a:25},
+ {l:'Selverklæret ekspert',a:50},
+ {l:'Modstand mod nyt uden argument',a:50},
+ {l:'Glemmer RT-tradition',a:25},
+ {l:'Snakker uden at have ordet',a:25},
+ {l:'Selvbøde (frivillig)',a:null},
+ {l:'Mødets specialbøde',a:null},
+ {l:'Bødemesterens fri-kort',a:-50,credit:true},
+];
+let S=load();
+function load(){
+  try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.members)return s;}catch(e){}
+  return {
+    members:DEFAULT_MEMBERS.map((n,i)=>({id:'m'+i,name:n})),
+    fines:DEFAULT_FINES.map((f,i)=>({id:'f'+i,...f})),
+    meetings:[],current:null,kasserer:''
+  };
+}
+function save(){localStorage.setItem(KEY,JSON.stringify(S));}
+function cur(){return S.meetings.find(m=>m.id===S.current)||null;}
+function fmt(n){return n.toLocaleString('da-DK');}
+function today(){return new Date().toLocaleDateString('da-DK',{day:'numeric',month:'long',year:'numeric'});}
+function memTotal(m,mem){return m.entries.filter(e=>e.mid===mem.id).reduce((s,e)=>s+e.amt,0);}
+function meetTotal(m){return m.entries.reduce((s,e)=>s+e.amt,0);}
+function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800);}
+
+/* ============ TABS ============ */
+let tab='meet';
+function showTab(t){tab=t;['meet','sum','hist','set'].forEach(x=>document.getElementById('tab'+x[0].toUpperCase()+x.slice(1)).classList.toggle('on',x===t));render();}
+
+/* ============ RENDER ============ */
+function render(){
+  const main=document.getElementById('main'),bar=document.getElementById('bar');
+  bar.innerHTML='';
+  if(tab==='meet')renderMeet(main,bar);
+  if(tab==='sum')renderSum(main,bar,cur());
+  if(tab==='hist')renderHist(main,bar);
+  if(tab==='set')renderSet(main,bar);
+}
+
+function renderMeet(main,bar){
+  const m=cur();
+  if(!m){
+    main.innerHTML='<div class="empty">Intet aktivt møde.<br>Start et nyt møde for at uddele bøder.</div>';
+    bar.innerHTML='<button class="btn btn-brass" onclick="newMeeting()">+ Nyt møde</button>';
+    return;
+  }
+  let rows=S.members.map(mem=>{
+    const t=memTotal(m,mem),n=m.entries.filter(e=>e.mid===mem.id).length,ab=m.absent.includes(mem.id);
+    if(ab)return `<button class="mrow afbud" onclick="openMember('${mem.id}')"><span class="nm">${mem.name}</span><span class="amt">Afbud</span></button>`;
+    return `<button class="mrow" onclick="openMember('${mem.id}')">
+      <span class="nm">${mem.name}</span>
+      ${n?`<span class="cnt">${n} bøde${n>1?'r':''}</span>`:''}
+      <span class="amt num ${t?'':'zero'}">${t?fmt(t)+' kr':'–'}</span></button>`;
+  }).join('');
+  main.innerHTML=`
+    <div class="mbanner">
+      <div><div class="mname">${m.name}</div><div class="mdate">${m.date}</div></div>
+      <div class="mtotal num">${fmt(meetTotal(m))} kr<small>i alt</small></div>
+    </div>
+    <div class="ledger">${rows}</div>`;
+  bar.innerHTML='<button class="btn btn-line" onclick="undoLast()">Fortryd sidste</button><button class="btn btn-brass" onclick="showTab(\'sum\')">Afslut møde →</button>';
+}
+
+function renderSum(main,bar,m,readonly){
+  if(!m){main.innerHTML='<div class="empty">Intet møde at gøre op.<br>Start et møde under fanen »Møde«.</div>';return;}
+  const rows=S.members.map(mem=>{
+    if(m.absent.includes(mem.id))return `<div class="srow dim"><span>${mem.name}</span><b>Afbud</b></div>`;
+    const t=memTotal(m,mem);
+    return t?`<div class="srow"><span>${mem.name}</span><b class="num">${fmt(t)} kr</b></div>`:'';
+  }).join('');
+  main.innerHTML=`
+    <div class="card">
+      <h2>${m.name}</h2><div class="sub">${m.date} · Opgørelse${m.closed?' <span class="badge">Afsluttet</span>':''}</div>
+      ${rows||'<div class="sub">Ingen bøder uddelt endnu.</div>'}
+      <div class="totline"><span>I alt til kassen</span><b class="num">${fmt(meetTotal(m))} kr</b></div>
+    </div>`;
+  bar.innerHTML=`<button class="btn btn-line" onclick="copySummary('${m.id}')">Kopiér</button>
+    <button class="btn btn-brass" onclick="sendSummary('${m.id}')">Send til kasserer</button>`;
+}
+
+function renderHist(main,bar){
+  if(!S.meetings.length){main.innerHTML='<div class="empty">Ingen møder endnu.</div>';return;}
+  main.innerHTML=[...S.meetings].reverse().map(m=>`
+    <button class="hrow" onclick="viewOld('${m.id}')">
+      <div><div class="hn">${m.name}${m.id===S.current?'<span class="badge">Aktivt</span>':''}</div><div class="hd">${m.date} · ${m.entries.length} bøder</div></div>
+      <div class="ht num">${fmt(meetTotal(m))} kr</div>
+    </button>`).join('');
+}
+function viewOld(id){const m=S.meetings.find(x=>x.id===id);tab='sum';['meet','sum','hist','set'].forEach(x=>document.getElementById('tab'+x[0].toUpperCase()+x.slice(1)).classList.toggle('on',x==='sum'));renderSum(document.getElementById('main'),document.getElementById('bar'),m,true);}
+
+function renderSet(main,bar){
+  main.innerHTML=`<div class="set">
+    <div class="card"><h2>Medlemmer</h2><div class="sub">Tryk × for at fjerne. Bøder på fjernede medlemmer bevares i historikken.</div>
+      <div>${S.members.map(m=>`<span class="chip">${m.name}<button onclick="delMember('${m.id}')">×</button></span>`).join('')}</div>
+      <div class="inline" style="margin-top:8px"><input type="text" id="newMem" placeholder="Nyt medlem"><button class="small" onclick="addMember()">Tilføj</button></div>
+    </div>
+    <div class="card"><h2>Kasserer</h2><div class="sub">Navn vises i beskeden, der sendes efter mødet.</div>
+      <input type="text" id="kass" value="${S.kasserer||''}" placeholder="Kassererens navn" onchange="S.kasserer=this.value;save()">
+    </div>
+    <div class="card"><h2>Data</h2><div class="sub">Alt gemmes kun lokalt på denne telefon. Tag en sikkerhedskopi en gang imellem.</div>
+      <button class="small" onclick="exportData()">Eksportér sikkerhedskopi</button>
+      <button class="dangerbtn" onclick="resetAll()">Nulstil alt</button>
+    </div>
+  </div>`;
+}
+
+/* ============ MEETING ACTIONS ============ */
+function newMeeting(){
+  const name=prompt('Hvor holdes mødet? (fx Guldsmeden)');
+  if(!name)return;
+  const m={id:'mt'+Date.now(),name:name.trim(),date:today(),entries:[],absent:[],closed:false};
+  S.meetings.push(m);S.current=m.id;save();showTab('meet');
+}
+function undoLast(){
+  const m=cur();if(!m||!m.entries.length)return toast('Intet at fortryde');
+  const e=m.entries.pop();save();render();
+  toast('Fjernet: '+S.members.find(x=>x.id===e.mid).name+' '+fmt(e.amt)+' kr');
+}
+
+/* ============ MEMBER SHEET ============ */
+let sheetMid=null;
+function openMember(mid){
+  sheetMid=mid;renderSheet();
+  document.getElementById('sheetWrap').classList.add('open');
+}
+function closeSheet(){document.getElementById('sheetWrap').classList.remove('open');sheetMid=null;}
+function renderSheet(){
+  const m=cur(),mem=S.members.find(x=>x.id===sheetMid);if(!m||!mem)return;
+  const ab=m.absent.includes(mem.id);
+  document.getElementById('shName').textContent=mem.name;
+  document.getElementById('shTot').textContent=fmt(memTotal(m,mem))+' kr';
+  const mine=m.entries.filter(e=>e.mid===mem.id);
+  document.getElementById('shBody').innerHTML=`
+    ${ab?'':`<div class="finegrid">${S.fines.map(f=>{
+      if(f.a===null)return `<button class="fbtn wide" onclick="pickAmount('${f.id}')"><span class="fl">${f.l}</span><span class="fa">vælg beløb…</span></button>`;
+      return `<button class="fbtn ${f.credit?'credit':''}" onclick="addFine('${f.id}')"><span class="fl">${f.l}</span><span class="fa num">${f.a>0?fmt(f.a):fmt(f.a)} kr</span></button>`;
+    }).join('')}</div>`}
+    ${mine.length?`<div class="mytitle">Uddelt til ${mem.name}</div>`+mine.map((e,i)=>`
+      <div class="frow"><span class="fl">${e.label}</span><span class="fa num">${fmt(e.amt)} kr</span><button class="del" onclick="delFine(${m.entries.indexOf(e)})">×</button></div>`).join(''):''}
+    <button class="afbudtoggle ${ab?'on':''}" onclick="toggleAfbud()">${ab?'Fjern afbud – '+mem.name+' er her alligevel':'Meld afbud for '+mem.name}</button>`;
+}
+function addFine(fid,amount){
+  const m=cur(),f=S.fines.find(x=>x.id===fid);
+  m.entries.push({mid:sheetMid,fid,label:f.l,amt:amount??f.a,ts:Date.now()});
+  save();render();
+  if(navigator.vibrate)navigator.vibrate(20);
+  closeSheet();
+  const mem=S.members.find(x=>x.id===sheetMid)||{};
+  toast((mem.name||'')+': '+f.l);
+}
+function pickAmount(fid){
+  const f=S.fines.find(x=>x.id===fid);
+  document.getElementById('shBody').insertAdjacentHTML('afterbegin',
+    `<div class="mytitle">${f.l} – vælg beløb</div><div class="seg" id="amtSeg">${[25,50,75,100].map(a=>`<button onclick="addFine('${fid}',${a})">${a}</button>`).join('')}</div>`);
+  document.getElementById('amtSeg').scrollIntoView();
+}
+function delFine(idx){const m=cur();m.entries.splice(idx,1);save();render();renderSheet();}
+function toggleAfbud(){
+  const m=cur();const i=m.absent.indexOf(sheetMid);
+  if(i>=0)m.absent.splice(i,1);else{m.absent.push(sheetMid);m.entries=m.entries.filter(e=>e.mid!==sheetMid);}
+  save();render();renderSheet();
+}
+
+/* ============ SUMMARY / SEND ============ */
+function summaryText(id){
+  const m=S.meetings.find(x=>x.id===id);
+  let lines=['XRT73 · Bøder','Møde: '+m.name+' · '+m.date,'––––––––––––––––'];
+  S.members.forEach(mem=>{
+    if(m.absent.includes(mem.id)){lines.push(mem.name+': afbud');return;}
+    const t=memTotal(m,mem);
+    if(t)lines.push(mem.name+': '+fmt(t)+' kr');
+  });
+  lines.push('––––––––––––––––','I ALT: '+fmt(meetTotal(m))+' kr');
+  lines.push('','Betales til '+(S.kasserer?S.kasserer+' (kasserer)':'kassereren')+' – gerne MobilePay.');
+  lines.push('Bøder uddeles med smil – uden diskussion.');
+  return lines.join('\n');
+}
+function markClosed(id){const m=S.meetings.find(x=>x.id===id);if(!m.closed){m.closed=true;if(S.current===id)S.current=null;save();}}
+async function sendSummary(id){
+  const text=summaryText(id);
+  if(navigator.share){try{await navigator.share({title:'XRT73 Bøder',text});markClosed(id);render();toast('Sendt – mødet er afsluttet');}catch(e){}}
+  else{copySummary(id);}
+}
+async function copySummary(id){
+  try{await navigator.clipboard.writeText(summaryText(id));markClosed(id);render();toast('Kopieret – mødet er afsluttet');}
+  catch(e){prompt('Kopiér teksten:',summaryText(id));}
+}
+
+/* ============ SETTINGS ACTIONS ============ */
+function addMember(){
+  const v=document.getElementById('newMem').value.trim();if(!v)return;
+  S.members.push({id:'m'+Date.now(),name:v});save();render();
+}
+function delMember(id){
+  const mem=S.members.find(m=>m.id===id);
+  if(confirm('Fjern '+mem.name+' fra medlemslisten?')){S.members=S.members.filter(m=>m.id!==id);save();render();}
+}
+function exportData(){
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='xrt73-boeder-backup.json';a.click();
+}
+function resetAll(){
+  if(confirm('Slet ALLE møder, bøder og indstillinger?')&&confirm('Helt sikker? Dette kan ikke fortrydes.')){localStorage.removeItem(KEY);S=load();save();render();toast('Nulstillet');}
+}
+
+render();
+</script>
+</body>
+</html>
