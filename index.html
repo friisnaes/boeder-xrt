@@ -88,6 +88,17 @@ main{flex:1;padding:0 14px 170px;overflow-y:auto}
 .btn-line{border:1.5px solid rgba(245,239,226,.35);color:var(--paper)}
 .btn:active{opacity:.8}
 
+/* Fine-first + meeting actions */
+.finefirst{width:100%;margin-bottom:12px;padding:12px;border-radius:var(--radius);border:1.5px dashed rgba(185,146,76,.6);color:var(--brass);font-weight:700;font-size:13.5px}
+.mbtns{display:flex;gap:8px;margin-bottom:12px}
+.mbtns button{flex:1;padding:11px;border-radius:10px;border:1px solid rgba(245,239,226,.3);font-weight:600;font-size:12.5px;color:rgba(245,239,226,.8)}
+.mbtns button.danger{border-color:rgba(217,119,109,.55);color:#D9776D}
+.readline{padding:4px 0 4px 14px;font-size:13.5px;display:flex;justify-content:space-between;color:rgba(34,30,21,.85)}
+.readline b{font-family:'Fraunces',serif;color:var(--red);font-weight:700}
+.readhead{display:flex;justify-content:space-between;font-weight:700;font-size:14.5px;padding:8px 0 2px;border-top:1px dashed rgba(34,30,21,.15);margin-top:6px}
+.readhead:first-of-type{border-top:none;margin-top:0}
+.readhead b{font-family:'Fraunces',serif;color:var(--red)}
+
 /* Bottom sheet */
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
 .sheet{position:fixed;bottom:0;left:50%;transform:translate(-50%,105%);width:100%;max-width:520px;background:var(--paper);color:var(--ink);border-radius:20px 20px 0 0;z-index:50;transition:transform .25s cubic-bezier(.3,1,.4,1);max-height:86dvh;display:flex;flex-direction:column}
@@ -229,6 +240,8 @@ const DEFAULT_FINES=[
 ];
 const SEED=[{"name":"Guldsmeden","date":"1. møde · 2026","absent":["Axel","Bock","Spuur"],"entries":[["Boye","For sent",25],["Jes","For sent",50],["Bo","Telefon fremme",25],["Kim","Telefon fremme",25],["Boye","Telefon fremme",25],["Holte","Telefon fremme",25],["Tage","Telefon fremme",25],["Peter","Telefon fremme",25],["Steff","Telefon fremme",25],["Danny","Telefon fremme",25],["Jacob","Telefon fremme",25],["Jes","Telefon fremme",25],["Fritz","Telefon fremme",25],["Axel","Været i medierne",100],["Bo","Uforberedt til eget punkt",25],["Bo","Over 60 sek. forklaring",25],["Fritz","Name-dropping",25],["Kim","Alder/ryg/knæ/tisse-problemer",25],["Jacob","Alder/ryg/knæ/tisse-problemer",25],["Jes","Alder/ryg/knæ/tisse-problemer",25],["Jes","Selverklæret ekspert",25],["Jacob","Bødemesterens fri-kort",-25],["Jes","Bødemesterens fri-kort",-25],["Bo","Mødets specialbøde",100]]},{"name":"The Scandinavian","date":"2. møde · 2026","absent":["Bock","Nis"],"entries":[["Kim","Telefon fremme",25],["Bo","Gentager noget sagt før",25],["Præst","Gentager noget sagt før",25],["Spuur","Gentager noget sagt før",25],["Holte","Gentager noget sagt før",25],["Axel","Gentager noget sagt før",25],["Peter","Gentager noget sagt før",25],["Kim","Uforberedt til eget punkt",75],["Tage","Uforberedt til eget punkt",75],["Danny","Spørgsmål for at høre sig selv",50],["Jacob","Spørgsmål for at høre sig selv",50],["Jes","Spørgsmål for at høre sig selv",50],["Jes","Alder/ryg/knæ/tisse-problemer",25],["Bo","Selverklæret ekspert",50],["Bo","Glemmer RT-tradition",50],["Bo","Snakker uden at have ordet",50],["Kim","Snakker uden at have ordet",25],["Præst","Snakker uden at have ordet",25],["Spuur","Snakker uden at have ordet",25],["Holte","Snakker uden at have ordet",25],["Axel","Snakker uden at have ordet",25],["Peter","Snakker uden at have ordet",25],["Danny","Snakker uden at have ordet",25],["Jacob","Snakker uden at have ordet",25],["Jes","Snakker uden at have ordet",25],["Boye","Selvbøde (frivillig)",25],["Præst","Bødemesterens fri-kort",-50],["Axel","Mødets specialbøde",50],["Steff","Mødets specialbøde",50],["Fritz","Mødets specialbøde",50]]},{"name":"Klubmesterskaber","date":"3. møde · 2026","absent":["Bock","Jes","Tage"],"entries":[["Fritz","Uforberedt til eget punkt",100]]}];
 function seedImport(s){
+  if(s.seedDone)return 0;
+  s.seedDone=true;
   let added=0;
   const news=[];
   SEED.forEach((sm,i)=>{
@@ -249,7 +262,7 @@ function seedImport(s){
   return added;
 }
 let S=load();
-try{if(seedImport(S))save();}catch(e){}
+try{seedImport(S);save();}catch(e){}
 function load(){
   try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.members){
     s.meetings.forEach(m=>{if(!m.log)m.log=[];});
@@ -306,6 +319,7 @@ function renderMeet(main,bar){
       <div><div class="mname">${m.name}</div><div class="mdate">${m.date}</div></div>
       <div class="mtotal num">${fmt(meetTotal(m))} kr<small>i alt</small></div>
     </div>
+    <button class="finefirst" onclick="openFinePicker()">＋ Uddel via bødetype – vælg bøde først</button>
     <div class="ledger wm">${rows}</div>`;
   bar.innerHTML='<button class="btn btn-line" onclick="undoLast()">Fortryd sidste</button><button class="btn btn-brass" onclick="showTab(\'sum\')">Afslut møde →</button>';
 }
@@ -325,11 +339,23 @@ function renderSum(main,bar,m,readonly){
       ${rows||'<div class="sub">Ingen bøder uddelt endnu.</div>'}
       <div class="totline"><span>I alt til kassen</span><b class="num">${fmt(meetTotal(m))} kr</b></div>
     </div>
+    ${m.entries.length?`<div class="card">
+      <h2>Oplæsning</h2><div class="sub">Bødemesterens gennemgang før endelig godkendelse</div>
+      <div class="seg">
+        <button id="rmP" class="${readMode==='p'?'on':''}" onclick="setReadMode('p','${m.id}')">Pr. person</button>
+        <button id="rmT" class="${readMode==='t'?'on':''}" onclick="setReadMode('t','${m.id}')">Pr. bødetype</button>
+      </div>
+      <div id="readout">${readoutHtml(m)}</div>
+    </div>`:''}
     <div class="card">
       <button class="loghead" onclick="this.parentElement.classList.toggle('logopen')">
         <span>Versionshistorik</span><span class="sub" style="margin:0">${m.log.length} ændringer ▾</span>
       </button>
       <div class="logbody">${logRows||'<div class="sub">Ingen ændringer registreret.</div>'}</div>
+    </div>
+    <div class="mbtns">
+      <button onclick="renameMeeting('${m.id}')">Redigér navn/dato</button>
+      <button class="danger" onclick="deleteMeeting('${m.id}')">Slet møde</button>
     </div>`;
   bar.innerHTML=((m.closed||m.id!==S.current)?`<button class="btn btn-line" onclick="reopen('${m.id}')">${m.closed?'Genåbn møde':'Gør aktivt'}</button>`:
     `<button class="btn btn-line" onclick="copySummary('${m.id}')">Kopiér</button>`)+
@@ -433,16 +459,43 @@ function renderSheet(){
     <button class="afbudtoggle ${ab?'on':''}" onclick="toggleAfbud()">${ab?'Fjern afbud – '+mem.name+' er her alligevel':'Meld afbud for '+mem.name}</button>`;
 }
 function mname(id){const x=S.members.find(m=>m.id===id);return x?x.name:'(fjernet medlem)';}
-function addFine(fid,amount){
+function addFineDirect(fid,mid,amount){
   const m=cur(),f=S.fines.find(x=>x.id===fid);
   const amt=amount??f.a;
-  m.entries.push({mid:sheetMid,fid,label:f.l,amt,ts:Date.now()});
-  log(m,'Bøde: '+mname(sheetMid)+' – '+f.l+' ('+fmt(amt)+' kr)');
+  m.entries.push({mid,fid,label:f.l,amt,ts:Date.now()});
+  log(m,'Bøde: '+mname(mid)+' – '+f.l+' ('+fmt(amt)+' kr)');
   save();render();
   if(navigator.vibrate)navigator.vibrate(20);
   closeSheet();
-  const mem=S.members.find(x=>x.id===sheetMid)||{};
-  toast((mem.name||'')+': '+f.l);
+  toast(mname(mid)+': '+f.l);
+}
+function addFine(fid,amount){addFineDirect(fid,sheetMid,amount);}
+function openFinePicker(){
+  sheetMid=null;
+  document.getElementById('shName').textContent='Vælg bøde';
+  document.getElementById('shTot').textContent='';
+  document.getElementById('shBody').innerHTML='<div class="finegrid">'+S.fines.map(f=>{
+    const fa=f.a===null?'vælg beløb…':fmt(f.a)+' kr';
+    return `<button class="fbtn ${f.credit?'credit':''}" onclick="finePickMember('${f.id}')"><span class="fl">${f.l}</span><span class="fa num">${fa}</span></button>`;
+  }).join('')+'</div>';
+  document.getElementById('sheetWrap').classList.add('open');
+}
+function finePickMember(fid){
+  const m=cur(),f=S.fines.find(x=>x.id===fid);
+  document.getElementById('shName').textContent=f.l;
+  document.getElementById('shTot').textContent=f.a===null?'':fmt(f.a)+' kr';
+  document.getElementById('shBody').innerHTML='<div class="mytitle">Hvem tildeles bøden?</div><div class="finegrid">'+S.members.map(mem=>{
+    const t=memTotal(m,mem),ab=m.absent.includes(mem.id);
+    return `<button class="fbtn" onclick="fineToMember('${fid}','${mem.id}')"><span class="fl">${mem.name}${ab?' · afbud':''}</span><span class="fa num">${t?fmt(t)+' kr':''}</span></button>`;
+  }).join('')+'</div>';
+}
+function fineToMember(fid,mid){
+  const f=S.fines.find(x=>x.id===fid);
+  if(f.a===null){
+    document.getElementById('shBody').innerHTML=`<div class="mytitle">${f.l} · ${mname(mid)} – vælg beløb</div><div class="seg">${[25,50,75,100].map(a=>`<button onclick="addFineDirect('${fid}','${mid}',${a})">${a}</button>`).join('')}</div>`;
+    return;
+  }
+  addFineDirect(fid,mid);
 }
 function pickAmount(fid){
   const f=S.fines.find(x=>x.id===fid);
@@ -460,6 +513,50 @@ function toggleAfbud(){
   if(i>=0){m.absent.splice(i,1);log(m,'Afbud fjernet: '+mname(sheetMid));}
   else{m.absent.push(sheetMid);log(m,'Afbud: '+mname(sheetMid));}
   save();render();renderSheet();
+}
+
+/* ============ READOUT ============ */
+let readMode='p';
+function setReadMode(mode,id){readMode=mode;const m=S.meetings.find(x=>x.id===id);
+  document.getElementById('rmP').classList.toggle('on',mode==='p');
+  document.getElementById('rmT').classList.toggle('on',mode==='t');
+  document.getElementById('readout').innerHTML=readoutHtml(m);}
+function readoutHtml(m){
+  if(readMode==='p'){
+    return S.members.map(mem=>{
+      const mine=m.entries.filter(e=>e.mid===mem.id);
+      if(!mine.length)return '';
+      const t=memTotal(m,mem);
+      return `<div class="readhead"><span>${mem.name}${m.absent.includes(mem.id)?' · afbud':''}</span><b class="num">${fmt(t)} kr</b></div>`+
+        mine.map(e=>`<div class="readline"><span>${e.label}</span><b class="num">${fmt(e.amt)}</b></div>`).join('');
+    }).join('');
+  }
+  const byType={};
+  m.entries.forEach(e=>{(byType[e.label]=byType[e.label]||[]).push(e);});
+  return Object.keys(byType).map(l=>{
+    const es=byType[l],sum=es.reduce((s,e)=>s+e.amt,0);
+    return `<div class="readhead"><span>${l}</span><b class="num">${fmt(sum)} kr</b></div>`+
+      es.map(e=>`<div class="readline"><span>${mname(e.mid)}</span><b class="num">${fmt(e.amt)}</b></div>`).join('');
+  }).join('');
+}
+
+/* ============ MEETING EDIT/DELETE ============ */
+function renameMeeting(id){
+  const m=S.meetings.find(x=>x.id===id);
+  const n=prompt('Mødets navn:',m.name);if(n===null)return;
+  const d=prompt('Dato/tekst:',m.date);if(d===null)return;
+  if(n.trim()&&(n.trim()!==m.name||d.trim()!==m.date)){
+    log(m,'Møde redigeret: "'+m.name+' · '+m.date+'" → "'+n.trim()+' · '+d.trim()+'"',true);
+    m.name=n.trim();m.date=d.trim();save();render();toast('Møde opdateret');
+  }
+}
+function deleteMeeting(id){
+  const m=S.meetings.find(x=>x.id===id);
+  if(!confirm('Slet mødet "'+m.name+'" med '+m.entries.length+' bøder?'))return;
+  if(!confirm('Helt sikker? Mødet og dets versionshistorik slettes permanent.'))return;
+  S.meetings=S.meetings.filter(x=>x.id!==id);
+  if(S.current===id)S.current=null;
+  save();showTab('hist');toast('"'+m.name+'" slettet');
 }
 
 /* ============ SUMMARY / SEND ============ */
